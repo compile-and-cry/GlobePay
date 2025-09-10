@@ -41,7 +41,7 @@
     let processingShownAt = null;
     let successShownAt = null;
     let successReloadTimer = null;
-    const MIN_PROCESSING_MS = 10000; // ensure user sees processing state
+    const MIN_PROCESSING_MS = 7000; // ensure user sees processing state
     const SUCCESS_HOLD_MS = 10000;  // keep success visible before resetting
 
     function showPending() {
@@ -70,15 +70,19 @@
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         if (!AudioContext) return;
         const ctx = new AudioContext();
-        const dur = 1.1, sr = ctx.sampleRate, len = Math.floor(sr*dur);
+        const dur = 1.4, sr = ctx.sampleRate, len = Math.floor(sr*dur);
         const buf = ctx.createBuffer(1, len, sr);
         const d = buf.getChannelData(0);
-        for (let i=0;i<len;i++){ const w=Math.random()*2-1; const t=i/sr; const env=Math.min(1,t*10)*Math.exp(-3*t); d[i]=((d[i-1]||0)*0.98 + w*0.06)*env; }
+        for (let i=0;i<len;i++){ const w=Math.random()*2-1; const t=i/sr; const env=Math.min(1,t*10)*Math.exp(-2.4*t); d[i]=((d[i-1]||0)*0.98 + w*0.06)*env; }
         const src=ctx.createBufferSource(); src.buffer=buf;
         const f=ctx.createBiquadFilter(); f.type='bandpass'; f.frequency.value=800;
-        const g=ctx.createGain(); g.gain.value=0.25; src.connect(f); f.connect(g); g.connect(ctx.destination);
-        const now=ctx.currentTime; f.frequency.setValueAtTime(600,now); f.frequency.exponentialRampToValueAtTime(2400,now+0.35); f.frequency.exponentialRampToValueAtTime(500,now+1.0);
-        src.start(); setTimeout(()=>{try{ctx.close();}catch(e){}}, 1400);
+        const g=ctx.createGain(); g.gain.value=0.35; src.connect(f); f.connect(g); g.connect(ctx.destination);
+        const now=ctx.currentTime; f.frequency.setValueAtTime(600,now); f.frequency.exponentialRampToValueAtTime(2600,now+0.45); f.frequency.exponentialRampToValueAtTime(500,now+1.2);
+        // Soft chime overlay
+        const osc = ctx.createOscillator(); osc.type='sine'; osc.frequency.setValueAtTime(880, now+0.15); osc.frequency.exponentialRampToValueAtTime(1320, now+0.35);
+        const g2 = ctx.createGain(); g2.gain.setValueAtTime(0.0001, now+0.15); g2.gain.exponentialRampToValueAtTime(0.28, now+0.20); g2.gain.exponentialRampToValueAtTime(0.0001, now+0.8);
+        osc.connect(g2); g2.connect(ctx.destination); osc.start(now+0.15); osc.stop(now+0.9);
+        src.start(); setTimeout(()=>{try{ctx.close();}catch(e){}}, 1600);
       } catch(e){}
     }
 

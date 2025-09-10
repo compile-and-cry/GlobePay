@@ -41,7 +41,7 @@
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         if (!AudioContext) return;
         const ctx = new AudioContext();
-        const dur = 1.1; // seconds
+        const dur = 1.6; // seconds (longer)
         const sr = ctx.sampleRate;
         const length = Math.floor(sr * dur);
         const buffer = ctx.createBuffer(2, length, sr);
@@ -53,7 +53,7 @@
             data[i] = (data[i-1] || 0) * 0.98 + white * 0.06;
             // envelope: fast attack, quick decay
             const t = i / sr;
-            const env = Math.min(1, t * 10) * Math.exp(-3 * t);
+            const env = Math.min(1, t * 10) * Math.exp(-2.4 * t);
             data[i] *= env;
           }
         }
@@ -64,7 +64,7 @@
         filter.type = 'bandpass';
         filter.frequency.value = 800;
         const gain = ctx.createGain();
-        gain.gain.value = 0.3; // modest volume
+        gain.gain.value = 0.45; // a bit louder
         const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
         if (panner) panner.pan.value = -0.8;
         src.connect(filter);
@@ -75,14 +75,26 @@
         // Animate sweep and pan
         const now = ctx.currentTime;
         filter.frequency.setValueAtTime(600, now);
-        filter.frequency.exponentialRampToValueAtTime(2400, now + 0.35);
-        filter.frequency.exponentialRampToValueAtTime(500, now + 1.0);
+        filter.frequency.exponentialRampToValueAtTime(2600, now + 0.45);
+        filter.frequency.exponentialRampToValueAtTime(500, now + 1.4);
         if (panner) {
           panner.pan.setValueAtTime(-0.8, now);
-          panner.pan.linearRampToValueAtTime(0.8, now + 0.7);
+          panner.pan.linearRampToValueAtTime(0.8, now + 0.9);
         }
+        // Add a short, soft chime overlay (UPI-like confirmation feel)
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, now + 0.15);
+        osc.frequency.exponentialRampToValueAtTime(1320, now + 0.35);
+        const g2 = ctx.createGain();
+        g2.gain.setValueAtTime(0.0001, now + 0.15);
+        g2.gain.exponentialRampToValueAtTime(0.35, now + 0.20);
+        g2.gain.exponentialRampToValueAtTime(0.0001, now + 0.75);
+        osc.connect(g2); g2.connect(ctx.destination);
+        osc.start(now + 0.15);
+        osc.stop(now + 0.9);
         // Auto-close context to release resources
-        setTimeout(() => { try { ctx.close(); } catch(e){} }, (dur + 0.2) * 1000);
+        setTimeout(() => { try { ctx.close(); } catch(e){} }, (dur + 0.4) * 1000);
       } catch(e) { /* ignore */ }
     }
     // Try autoplay on load (armed from previous user gesture), retry briefly if blocked, with interaction fallbacks
