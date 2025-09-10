@@ -6,23 +6,55 @@
   <title>GlobalPay — Enter Details</title>
   <link rel="icon" type="image/svg+xml" href="/static/globe.svg" />
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; min-height: 100vh; margin: 0; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #22c55e 100%); }
-    .wrap { width: 100%; max-width: 880px; padding: 32px; }
-    .brand { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.2); }
-    .card { background: rgba(255,255,255,.96); box-shadow: 0 10px 30px rgba(2,6,23,.25); border-radius: 14px; padding: 28px; backdrop-filter: blur(4px); }
-    label { display:block; margin: 12px 0 4px; }
-    input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
+    :root{
+      --bg1:#0ea5e9; --bg2:#6366f1; --bg3:#22c55e;
+      --text:#0b1021; --muted:#475569; --border:#cbd5e1; --card:#ffffffF5;
+      --chip:#eef2ff; --chip2:#dcfce7; --focus:#7dd3fc;
+    }
+    *{box-sizing:border-box}
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; min-height: 100vh; margin: 0; display:flex; align-items:center; justify-content:center; background: radial-gradient(1200px circle at 10% 10%, rgba(34,197,94,.25) 0%, transparent 35%), linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 50%, var(--bg3) 100%); }
+    .wrap { width: 100%; max-width: 980px; padding: 28px; }
+    .brand { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.2); margin: 6px 0 4px; display:flex; align-items:center; gap:10px; }
+    .chips { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 16px; }
+    .chip { padding:6px 10px; border-radius:999px; background: var(--chip); color:#1f2937; font-weight:600; font-size:12px; box-shadow: 0 2px 8px rgba(2,6,23,.08); }
+    .chip.ok { background: var(--chip2); }
+    .cards { display:grid; grid-template-columns: 1.15fr .85fr; gap:16px; }
+    .card { background: var(--card); border:1px solid var(--border); box-shadow: 0 10px 30px rgba(2,6,23,.20); border-radius: 14px; padding: 22px; backdrop-filter: blur(6px); }
+    .card h3 { margin: 0 0 12px; color: var(--text); }
+    label { display:block; margin: 10px 0 6px; color: var(--muted); font-weight:600; font-size: 13px; }
+    input, textarea, select { width: 100%; padding: 12px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 15px; background:#fff; color: var(--text); transition: box-shadow .15s, border-color .15s; }
+    input[disabled], textarea[disabled] { background:#f8fafc; color:#64748b; }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--focus); box-shadow: 0 0 0 3px rgba(125,211,252,.45); }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    button { margin-top: 16px; padding: 12px 18px; border: 0; border-radius: 8px; background: linear-gradient(90deg, #0ea5e9, #6366f1); color: white; cursor: pointer; box-shadow: 0 6px 16px rgba(2,6,23,.25); }
-    .note { color: #555; font-size: 14px; margin-top: 12px; }
+    .hint { color:#334155; font-size: 12px; margin-top: 6px; }
+    .muted { color:#475569; }
+    .btns { display:flex; gap:12px; align-items:center; }
+    button { margin-top: 16px; padding: 12px 18px; border: 0; border-radius: 10px; background: linear-gradient(90deg, var(--bg1), var(--bg2)); color: white; cursor: pointer; box-shadow: 0 6px 16px rgba(2,6,23,.25); font-weight:700; }
+    .ghost { background:#fff; color:#0b1021; border:1px solid var(--border); box-shadow:none; }
+    @media (max-width: 840px) { .cards { grid-template-columns: 1fr; } }
+    /* Lightweight mobile overlay */
+    .overlay { position: fixed; inset: 0; background: rgba(15,23,42,.35); display: none; align-items: center; justify-content: center; z-index: 50; }
+    .overlay .panel { background: #fff; border:1px solid var(--border); border-radius: 14px; box-shadow: 0 12px 30px rgba(2,6,23,.25); padding: 18px 20px; text-align:center; min-width: 240px; }
+    .spinner { width: 28px; height: 28px; border: 3px solid #e2e8f0; border-top-color: #0ea5e9; border-radius: 50%; display:inline-block; animation: spin 0.9s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <div class="wrap">
   <img src="/static/logo.svg" alt="GlobalPay" style="height:44px; margin-bottom:12px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.2));" />
-  <h1 class="brand" style="margin: 6px 0 4px;">Enter Payment Details</h1>
-  <p class="note" style="color:#f0f9ff; text-shadow: 0 1px 2px rgba(0,0,0,.2)">Demo only: Simulated flow. No real settlement.</p>
+  <div class="brand">
+    <h1 style="margin:0; font-size:24px;">Enter Payment Details</h1>
+    <span class="chip">Step 1 of 2</span>
+  </div>
+  <div class="chips">
+    <span class="chip ok">No fees on INR</span>
+    <span class="chip">Live FX to INR</span>
+    <span class="chip">UPI rails</span>
+    <span class="chip">Demo only</span>
+  </div>
+  <div class="cards">
   <div class="card">
+    <h3>Receiver</h3>
     <form action="/pay" method="post" id="payForm">
       {% if sid %}
       <input type="hidden" name="sid" value="{{ sid }}" />
@@ -39,35 +71,48 @@
         <div>
           <label for="amount">Amount</label>
           <input type="number" step="0.01" id="amount" name="amount" placeholder="500" min="0.01" required />
+          <div class="hint">Minimum 0.01 • Enter amount in selected currency</div>
         </div>
         <div>
           <label for="currency">Currency</label>
           <select id="currency" name="currency" required>
-            <option value="INR">India (INR)</option>
-            <option value="AED">Emirates (UAE) — AED</option>
-            <option value="NPR">Nepal — NPR</option>
-            <option value="BTN">Bhutan — BTN</option>
-            <option value="SGD">Singapore — SGD</option>
-            <option value="MUR">Mauritius — MUR</option>
-            <option value="EUR">France — EUR</option>
-            <option value="LKR">Sri Lanka — LKR</option>
+            <option value="INR">🇮🇳 India — INR</option>
+            <option value="AED">🇦🇪 UAE — AED</option>
+            <option value="NPR">🇳🇵 Nepal — NPR</option>
+            <option value="BTN">🇧🇹 Bhutan — BTN</option>
+            <option value="SGD">🇸🇬 Singapore — SGD</option>
+            <option value="MUR">🇲🇺 Mauritius — MUR</option>
+            <option value="EUR">🇫🇷 France — EUR</option>
+            <option value="LKR">🇱🇰 Sri Lanka — LKR</option>
           </select>
+          <div class="hint" id="feeHint">No fees on INR payments</div>
         </div>
       </div>
 
       <label for="note">Note (optional)</label>
-      <textarea id="note" name="note" placeholder="Invoice #123"></textarea>
+      <textarea id="note" name="note" placeholder="Invoice #123" rows="3"></textarea>
 
-      <button type="submit">Pay</button>
+      <div class="btns">
+        <button type="submit">Pay</button>
+      </div>
     </form>
   </div>
+  </div>
+  </div>
+  <div class="overlay" id="mobileDelay">
+    <div class="panel">
+      <span class="spinner"></span>
+      <span class="muted" style="vertical-align: middle; font-weight:600">Preparing payment…</span>
+      <div class="hint">Checking FX & UPI details</div>
+    </div>
   </div>
   <script>
     // On submit, immediately mark session as processing so the desktop hides the QR/value panel
     (function(){
       var form = document.getElementById('payForm');
       if (!form) return;
-      form.addEventListener('submit', function(){
+      var submittedOnce = false;
+      form.addEventListener('submit', function(ev){
         var sidInput = form.querySelector('input[name="sid"]');
         var sid = sidInput ? sidInput.value : '';
         if (!sid) return;
@@ -78,7 +123,27 @@
         } else {
           try { fetch(url, { method: 'POST', keepalive: true }); } catch (e) {}
         }
+        // Mobile-only short delay with overlay for better perceived flow
+        var isMobile = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+        if (isMobile && !submittedOnce) {
+          ev.preventDefault();
+          submittedOnce = true;
+          var ov = document.getElementById('mobileDelay');
+          if (ov) ov.style.display = 'flex';
+          setTimeout(function(){
+            if (form.requestSubmit) form.requestSubmit(); else form.submit();
+          }, 900); // ~0.9s delay before actual submit
+        }
       });
+      // Dynamic fee hint based on currency
+      var ccy = document.getElementById('currency');
+      var hint = document.getElementById('feeHint');
+      function updateHint(){
+        var v = (ccy && ccy.value || '').toUpperCase();
+        if (v === 'INR') { hint.textContent = 'No fees on INR payments'; }
+        else { hint.textContent = 'Includes live FX + small fees shown upfront'; }
+      }
+      if (ccy && hint) { ccy.addEventListener('change', updateHint); updateHint(); }
     })();
   </script>
 </body>
