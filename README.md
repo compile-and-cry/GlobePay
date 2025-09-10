@@ -33,6 +33,13 @@ Notes
 - QR generates a `upi://pay` deep-link; amount is integer INR for simplicity.
   - Conversion uses exchangerate.host `/live` endpoint (USD quotes). Base→INR computed as USDINR/USDBASE.
 
+Architecture & Roadmap
+- See `docs/design.puml` for PlantUML diagrams:
+  - Architecture (components), Payment Flow (sequence), Deployment.
+  - Roadmap (Phase 1–4: Demo → Pilot → Growth → Full Stack PSP).
+  - Bottom Line summary of regulatory path and requirements.
+  - Render with any PlantUML viewer or VS Code extension (e.g., "PlantUML").
+
 Migrations
 - Located in `migrations/` and embedded via `sqlx::migrate!()`.
 - They run automatically on startup when you `cargo run`.
