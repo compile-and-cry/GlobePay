@@ -4,12 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GlobalPay — Scan to Pay</title>
+  <link rel="icon" type="image/svg+xml" href="/static/globe.svg" />
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; min-height: 100vh; margin: 0; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #22c55e 100%); }
-    .wrap { text-align:center; padding: 24px; }
+    .wrap { text-align:center; padding: 24px; max-width: 1100px; margin: 0 auto; }
+    .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; justify-items: center; }
     .card { display:inline-block; background: rgba(255,255,255,.96); box-shadow: 0 10px 30px rgba(2,6,23,.25); border-radius: 14px; padding: 24px; }
     img { width: 256px; height: 256px; display:block; margin: 12px auto; }
-    h1 { color:#fff; text-shadow: 0 1px 2px rgba(0,0,0,.2); }
+    h1 { color:#fff; text-shadow: 0 1px 2px rgba(0,0,0,.2); margin: 0 0 6px; }
+    .tagline { color:#e5f2ff; margin: 0 0 12px; font-weight:600; text-shadow: 0 1px 2px rgba(0,0,0,.2) }
     .muted { color:#f0f9ff; text-shadow: 0 1px 2px rgba(0,0,0,.2) }
     a.btn { margin-top: 16px; padding: 12px 18px; border:0; border-radius:8px; background: linear-gradient(90deg, #0ea5e9, #6366f1); color:#fff; text-decoration:none; display:inline-block; box-shadow: 0 6px 16px rgba(2,6,23,.25); }
     .processing, .success { display:none; }
@@ -19,37 +22,157 @@
     .coin:nth-child(3) { animation-delay: .8s; }
     @keyframes flow { 0% { left: -40px; transform: rotate(0) scale(1); } 50% { transform: rotate(180deg) scale(1.05); } 100% { left: 420px; transform: rotate(360deg) scale(1); } }
     .ok { color: #166534; font-weight: 700; font-size: 22px; }
+    /* Feature badges */
+    .badges { display:flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; justify-content: center; }
+    .chip { padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.92); color:#0b1021; font-weight:600; font-size: 12px; box-shadow: 0 2px 8px rgba(2,6,23,.15); }
+    .value { text-align: left; max-width: 520px; margin-top: 100px; }
+    .value h3 { margin: 0 0 8px; color:#0b1021; }
+    .value ul { margin: 0; padding-left: 18px; color:#0b1021; }
+    .save { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: linear-gradient(90deg,#10b981,#22c55e); color:#06240f; font-weight:700; box-shadow: 0 4px 14px rgba(2,6,23,.2); }
+    .qr-caption { margin-top: 8px; color:#0b1021; }
+    .qr-sub { margin: 2px 0 0; color:#334155; font-size: 13px; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .value { text-align:center; margin-top: 16px; } .value ul { text-align:left; display:inline-block; } }
+    .chips { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin: 8px 0 6px; }
+    .chip { padding: 6px 10px; border-radius: 999px; background: rgba(226,232,240,.9); color:#0b1021; font-weight:600; font-size: 12px; box-shadow: 0 2px 8px rgba(2,6,23,.08); }
   </style>
   <script>
     const sid = '{{ sid }}';
+    let currentState = 'pending';
+    let processingShownAt = null;
+    let successShownAt = null;
+    let successReloadTimer = null;
+    const MIN_PROCESSING_MS = 10000; // ensure user sees processing state
+    const SUCCESS_HOLD_MS = 10000;  // keep success visible before resetting
+
+    function showPending() {
+      const layout = document.getElementById('qrLayout');
+      const proc = document.getElementById('processing');
+      const succ = document.getElementById('success');
+      if (layout) layout.style.display = 'grid';
+      proc.style.display = 'none';
+      succ.style.display = 'none';
+      currentState = 'pending';
+    }
+
+    function showProcessing() {
+      const layout = document.getElementById('qrLayout');
+      const proc = document.getElementById('processing');
+      const succ = document.getElementById('success');
+      if (layout) layout.style.display = 'none';
+      proc.style.display = 'block';
+      succ.style.display = 'none';
+      processingShownAt = Date.now();
+      currentState = 'processing';
+    }
+
+    function playJetWhoosh(){
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const dur = 1.1, sr = ctx.sampleRate, len = Math.floor(sr*dur);
+        const buf = ctx.createBuffer(1, len, sr);
+        const d = buf.getChannelData(0);
+        for (let i=0;i<len;i++){ const w=Math.random()*2-1; const t=i/sr; const env=Math.min(1,t*10)*Math.exp(-3*t); d[i]=((d[i-1]||0)*0.98 + w*0.06)*env; }
+        const src=ctx.createBufferSource(); src.buffer=buf;
+        const f=ctx.createBiquadFilter(); f.type='bandpass'; f.frequency.value=800;
+        const g=ctx.createGain(); g.gain.value=0.25; src.connect(f); f.connect(g); g.connect(ctx.destination);
+        const now=ctx.currentTime; f.frequency.setValueAtTime(600,now); f.frequency.exponentialRampToValueAtTime(2400,now+0.35); f.frequency.exponentialRampToValueAtTime(500,now+1.0);
+        src.start(); setTimeout(()=>{try{ctx.close();}catch(e){}}, 1400);
+      } catch(e){}
+    }
+
+    function showSuccess() {
+      const layout = document.getElementById('qrLayout');
+      const proc = document.getElementById('processing');
+      const succ = document.getElementById('success');
+      if (layout) layout.style.display = 'none';
+      proc.style.display = 'none';
+      succ.style.display = 'block';
+      successShownAt = Date.now();
+      currentState = 'success';
+      // Play subtle jet whoosh once on success (desktop kiosk)
+      playJetWhoosh();
+      if (successReloadTimer) clearTimeout(successReloadTimer);
+      successReloadTimer = setTimeout(() => { location.reload(); }, SUCCESS_HOLD_MS);
+    }
+
     async function poll() {
       try {
         const r = await fetch('/session_status?sid=' + encodeURIComponent(sid), { cache: 'no-store' });
         const j = await r.json();
         const s = j.status;
-        const qr = document.getElementById('qr');
-        const proc = document.getElementById('processing');
-        const succ = document.getElementById('success');
         if (s === 'processing') {
-          qr.style.display = 'none'; proc.style.display = 'block'; succ.style.display = 'none';
+          if (currentState !== 'processing') showProcessing();
         } else if (s === 'success') {
-          qr.style.display = 'none'; proc.style.display = 'none'; succ.style.display = 'block';
+          const now = Date.now();
+          const shownFor = processingShownAt ? (now - processingShownAt) : 0;
+          if (currentState !== 'processing' && currentState !== 'success') {
+            // jump to processing briefly, then success
+            showProcessing();
+            setTimeout(showSuccess, MIN_PROCESSING_MS);
+          } else if (currentState === 'processing' && shownFor < MIN_PROCESSING_MS) {
+            setTimeout(showSuccess, MIN_PROCESSING_MS - shownFor);
+          } else if (currentState !== 'success') {
+            showSuccess();
+          }
         } else {
-          qr.style.display = 'block'; proc.style.display = 'none'; succ.style.display = 'none';
+          // pending / not_found / invalid
+          if (currentState !== 'pending') showPending();
         }
       } catch (e) { /* ignore */ }
     }
     setInterval(poll, 1000);
     window.addEventListener('load', poll);
+    // Rotate partner/status hints while processing is visible
+    (function(){
+      var el = document.getElementById('rolling2');
+      if (!el) return;
+      var msgs = [
+        'UPI PA/PG — Razorpay',
+        'UPI PA/PG — Cashfree',
+        'UPI PA/PG — PayU',
+        'Intl — Stripe',
+        'Intl — Wise',
+        'Intl — Adyen',
+        'FX via bank partner…'
+      ];
+      var i = 0;
+      setInterval(function(){ i = (i+1) % msgs.length; el.textContent = msgs[i]; }, 700);
+    })();
   </script>
 </head>
 <body>
   <div class="wrap">
-    <h1>Scan to Start Payment</h1>
-    <p class="muted">Scan the QR to open the payment form.</p>
-    <div class="card" id="qr">
-      <img src="{{ qr_data_url }}" alt="Scan to Pay" />
-      <p><a class="btn" href="{{ scan_url }}">Open form</a></p>
+    <img src="/static/logo.svg" alt="GlobalPay" style="height:44px; margin-bottom:12px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.2));" />
+    <h1>Pay In INR. Ditch The FX Markup.</h1>
+    <p class="tagline">&lt;1% transparent FX. Instant UPI settlement.</p>
+    <div class="layout" id="qrLayout">
+      <div class="card" id="qr">
+        <img src="{{ qr_data_url }}" alt="Scan to Pay" />
+        <div class="qr-caption">
+          <strong>Scan to Pay Securely (UPI)</strong>
+          <div class="qr-sub">Supports AED, NPR, BTN, SGD, MUR, EUR, LKR → INR</div>
+        </div>
+        <div class="badges">
+          <span class="chip">&lt;1% FX fee</span>
+          <span class="chip">₹99 transfer fee</span>
+          <span class="chip">₹25 platform fee</span>
+          <span class="chip">Instant UPI</span>
+          <span class="chip">Live FX rate</span>
+          <span class="chip">Upfront INR amount</span>
+        </div>
+      </div>
+      <div class="card value">
+        <h3>Why GlobalPay?</h3>
+        <ul>
+          <li>Transparent FX: live interbank rate, shown before pay</li>
+          <li>Simple pricing: ₹99 transfer fee + ₹25 platform fee</li>
+          <li>Instant settlement: UPI rails, INR to merchant</li>
+          <li>Full visibility: exact INR you’ll pay upfront</li>
+        </ul>
+        <div class="save">Avg after‑fee savings across AED, NPR, BTN, SGD, MUR, EUR, LKR: ₹1,500–₹2,500 on ₹80,000 (~$1,000) spend</div>
+      </div>
     </div>
     <div class="card processing" id="processing">
       <h3>Processing your payment…</h3>
@@ -58,7 +181,15 @@
         <div class="coin"></div>
         <div class="coin"></div>
       </div>
-      <p class="muted" style="color:#0b1021">Hang tight — almost there.</p>
+      <div class="chips">
+        <span class="chip">PA/PG (India): Razorpay</span>
+        <span class="chip">Cashfree</span>
+        <span class="chip">PayU</span>
+        <span class="chip">Intl: Stripe</span>
+        <span class="chip">Wise</span>
+        <span class="chip">Adyen</span>
+      </div>
+      <p class="muted" style="color:#0b1021" id="rolling2">FX via bank partner…</p>
     </div>
     <div class="card success" id="success">
       <h2 class="ok">Payment Successful</h2>

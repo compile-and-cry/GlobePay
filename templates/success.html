@@ -4,24 +4,99 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Payment Successful — GlobalPay</title>
+  <link rel="icon" type="image/svg+xml" href="/static/globe.svg" />
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; min-height: 100vh; margin: 0; text-align: center; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #22c55e 100%); overflow:hidden; }
-    .card { display: inline-block; background: rgba(255,255,255,.96); box-shadow: 0 10px 30px rgba(2,6,23,.25); border-radius: 14px; padding: 24px; }
-    .ok { color: #166534; font-weight: 700; font-size: 22px; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; min-height: 100vh; margin: 0; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #22c55e 100%); }
+    .wrap { width: 100%; max-width: 520px; padding: 16px; }
+    .card { background: rgba(255,255,255,.96); box-shadow: 0 10px 30px rgba(2,6,23,.25); border-radius: 14px; padding: 24px; text-align: center; }
+    h1 { color:#fff; text-shadow: 0 1px 2px rgba(0,0,0,.2); text-align:center; margin-bottom: 12px; font-size: 24px; }
+    .ok { color: #166534; font-weight: 700; font-size: 18px; margin: 4px 0 10px; }
+    .muted { color:#334155; }
     a.btn { margin-top: 16px; padding: 12px 18px; border: 0; border-radius: 8px; background: linear-gradient(90deg, #0ea5e9, #6366f1); color: white; text-decoration: none; display: inline-block; box-shadow: 0 6px 16px rgba(2,6,23,.25); }
-    .jet { position: absolute; top: 15%; left: -40%; color: rgba(255,255,255,.95); font-weight: 900; font-size: 40px; text-shadow: 0 4px 14px rgba(0,0,0,.35); white-space: nowrap; animation: zoom 1.2s ease-out 0.2s both; }
-    @keyframes zoom { from { transform: translateX(0) skewX(-10deg); opacity: .0; } to { transform: translateX(140%) skewX(0deg); opacity: 1; } }
+    @media (max-width: 480px) {
+      h1 { font-size: 20px; }
+      .card { padding: 18px; }
+      .ok { font-size: 16px; }
+      a.btn.back { display: none; }
+    }
   </style>
   <meta name="robots" content="noindex" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'unsafe-inline' 'self'"> 
 </head>
 <body>
-  <div class="jet">Payment Successful →</div>
-  <h1 style="color:#fff; text-shadow: 0 1px 2px rgba(0,0,0,.2)">Payment Successful</h1>
-  <div class="card">
-    <p class="ok">Payment {{ id }} marked as success (demo).</p>
-    <p>This is a simulated flow. In production, status must be updated via the bank/PSP callback and verified before fulfillment.</p>
-    <p><a class="btn" href="/">Back to start</a></p>
+  <div class="wrap">
+    <img src="/static/logo.svg" alt="GlobalPay" style="height:44px; margin-bottom:8px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.2));" />
+    <h1>Payment Successful</h1>
+    <div class="card">
+      <p class="ok">{{ source_amount }} {{ source_currency }} received • ₹{{ amount_inr }} credited</p>
+      {% if payer_name %}<p class="muted">Receiver: {{ payer_name }}</p>{% endif %}
+      <p class="muted">This is a simulated flow. In production, status must be updated via the bank/PSP callback and verified before fulfillment.</p>
+      <p><a class="btn back" href="/">Back to start</a></p>
+    </div>
   </div>
+  <script>
+    // Jet whoosh sound using Web Audio (no external file required)
+    function playJetWhoosh() {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const dur = 1.1; // seconds
+        const sr = ctx.sampleRate;
+        const length = Math.floor(sr * dur);
+        const buffer = ctx.createBuffer(2, length, sr);
+        for (let ch = 0; ch < 2; ch++) {
+          const data = buffer.getChannelData(ch);
+          for (let i = 0; i < length; i++) {
+            // pinkish noise
+            const white = Math.random() * 2 - 1;
+            data[i] = (data[i-1] || 0) * 0.98 + white * 0.06;
+            // envelope: fast attack, quick decay
+            const t = i / sr;
+            const env = Math.min(1, t * 10) * Math.exp(-3 * t);
+            data[i] *= env;
+          }
+        }
+        const src = ctx.createBufferSource();
+        src.buffer = buffer;
+        // Filter sweep to simulate jet pass-by
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 800;
+        const gain = ctx.createGain();
+        gain.gain.value = 0.3; // modest volume
+        const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+        if (panner) panner.pan.value = -0.8;
+        src.connect(filter);
+        filter.connect(panner || gain);
+        if (panner) panner.connect(gain);
+        gain.connect(ctx.destination);
+        src.start();
+        // Animate sweep and pan
+        const now = ctx.currentTime;
+        filter.frequency.setValueAtTime(600, now);
+        filter.frequency.exponentialRampToValueAtTime(2400, now + 0.35);
+        filter.frequency.exponentialRampToValueAtTime(500, now + 1.0);
+        if (panner) {
+          panner.pan.setValueAtTime(-0.8, now);
+          panner.pan.linearRampToValueAtTime(0.8, now + 0.7);
+        }
+        // Auto-close context to release resources
+        setTimeout(() => { try { ctx.close(); } catch(e){} }, (dur + 0.2) * 1000);
+      } catch(e) { /* ignore */ }
+    }
+    // Try autoplay on load (armed from previous user gesture), retry briefly if blocked, with interaction fallbacks
+    (function(){
+      let played = false;
+      function tryPlay(){ if (!played) { playJetWhoosh(); played = true; } }
+      function armed(){ try { return sessionStorage.getItem('gp_sound') === '1'; } catch(e){ return false; } }
+      function disarm(){ try { sessionStorage.removeItem('gp_sound'); } catch(e){} }
+      function attemptSequence(){ if (!armed()) return; tryPlay(); setTimeout(tryPlay, 150); setTimeout(tryPlay, 400); setTimeout(tryPlay, 900); setTimeout(disarm, 1200); }
+      window.addEventListener('DOMContentLoaded', attemptSequence);
+      document.addEventListener('visibilitychange', function(){ if (!document.hidden) attemptSequence(); });
+      document.addEventListener('click', tryPlay, { once: true });
+      document.addEventListener('touchstart', tryPlay, { once: true, passive: true });
+    })();
+  </script>
 </body>
 </html>

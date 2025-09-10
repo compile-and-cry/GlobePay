@@ -1,4 +1,6 @@
-use axum::{routing::{get, post}, Router, extract::{State, Query}, response::{Html, IntoResponse}, Form, Json};
+use axum::{routing::{get, post}, Router, extract::{State, Query}, response::{Html, IntoResponse, Redirect, Response}, Form, Json};
+use axum::http::StatusCode;
+use tower_http::services::ServeDir;
 use serde::Deserialize;
 use tera::{Context};
 use uuid::Uuid;
@@ -13,7 +15,9 @@ pub fn router(state: AppState) -> Router {
         .route("/generate", post(create_payment))
         .route("/processing", get(processing))
         .route("/session_status", get(session_status))
+        .route("/session_processing", post(session_processing))
         .route("/success", get(success))
+        .nest_service("/static", ServeDir::new("static"))
         .with_state(state)
 }
 
@@ -108,11 +112,15 @@ struct WithSid {
 async fn create_payment(State(state): State<AppState>, Query(q): Query<WithSid>, Form(form): Form<PaymentForm>) -> Html<String> {
     let upi_id = normalize_upi(&form.upi_or_mobile);
     let src_ccy = form.currency.trim().to_uppercase();
-    let (rate, rate_ts, provider) = match fetch_rate_to_inr(&src_ccy).await {
-        Ok((r, ts, prov)) => (r, Some(ts), Some(prov)),
-        Err(_) => {
-            let r = fallback_rate(&src_ccy);
-            (r, None, Some("fallback".to_string()))
+    let (rate, rate_ts, provider) = if src_ccy == "INR" {
+        (1.0, Some(Utc::now()), Some("static".to_string()))
+    } else {
+        match fetch_rate_to_inr(&src_ccy).await {
+            Ok((r, ts, prov)) => (r, Some(ts), Some(prov)),
+            Err(_) => {
+                let r = fallback_rate(&src_ccy);
+                (r, None, Some("fallback".to_string()))
+            }
         }
     };
 
@@ -120,10 +128,12 @@ async fn create_payment(State(state): State<AppState>, Query(q): Query<WithSid>,
     let amount_inr = (form.amount * rate * 100.0).round() / 100.0;
 
     // Store fx rate record (best-effort)
-    if let Some(ts) = rate_ts {
-        let _ = state.db.insert_fx_rate(&src_ccy, "INR", rate, provider.as_deref(), Some(ts)).await;
-    } else {
-        let _ = state.db.insert_fx_rate(&src_ccy, "INR", rate, provider.as_deref(), None).await;
+    if src_ccy != "INR" {
+        if let Some(ts) = rate_ts {
+            let _ = state.db.insert_fx_rate(&src_ccy, "INR", rate, provider.as_deref(), Some(ts)).await;
+        } else {
+            let _ = state.db.insert_fx_rate(&src_ccy, "INR", rate, provider.as_deref(), None).await;
+        }
     }
 
     let id = state
@@ -205,11 +215,22 @@ fn fallback_rate(base: &str) -> f64 {
     }
 }
 
-async fn success(State(state): State<AppState>, axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>) -> Html<String> {
+async fn success(State(state): State<AppState>, axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>, headers: axum::http::HeaderMap) -> Response {
     let id_str = params.get("id").cloned().unwrap_or_default();
     let id = Uuid::parse_str(&id_str).ok();
-    if let Some(id) = id {
-        let _ = state.db.mark_success(id).await;
+    let mut amount_inr: Option<f64> = None;
+    let mut source_amount: Option<f64> = None;
+    let mut source_currency: Option<String> = None;
+    let mut payer_name: Option<String> = None;
+
+    if let Some(pid) = id {
+        let _ = state.db.mark_success(pid).await;
+        if let Ok(Some(p)) = state.db.get_payment(pid).await {
+            amount_inr = Some(p.amount_inr);
+            source_amount = Some(p.source_amount);
+            source_currency = Some(p.source_currency);
+            payer_name = Some(p.payer_name);
+        }
     }
     if let Some(sid_str) = params.get("sid") {
         if let Ok(sid) = Uuid::parse_str(sid_str) {
@@ -217,10 +238,19 @@ async fn success(State(state): State<AppState>, axum::extract::Query(params): ax
         }
     }
 
+    // If accessed via localhost (desktop), redirect to QR page instead of showing success
+    if let Some(host) = headers.get(axum::http::header::HOST).and_then(|v| v.to_str().ok()) {
+        if host.starts_with("localhost") || host.starts_with("127.0.0.1") {
+            return Redirect::to("/").into_response();
+        }
+    }
     let mut ctx = Context::new();
-    ctx.insert("id", &id_str);
+    if let Some(n) = payer_name { ctx.insert("payer_name", &n); }
+    if let Some(a) = amount_inr { ctx.insert("amount_inr", &format!("{:.2}", a)); }
+    if let Some(a) = source_amount { ctx.insert("source_amount", &format!("{:.2}", a)); }
+    if let Some(c) = source_currency { ctx.insert("source_currency", &c); }
     let body = state.templates.render("success.html", &ctx).unwrap_or_else(|e| format!("Template error: {}", e));
-    Html(body)
+    Html(body).into_response()
 }
 
 async fn processing(State(state): State<AppState>, Query(params): Query<std::collections::HashMap<String, String>>) -> Html<String> {
@@ -240,4 +270,13 @@ async fn session_status(State(state): State<AppState>, Query(params): Query<std:
         }
     } else { "invalid".into() };
     Json(serde_json::json!({"status": status}))
+}
+
+async fn session_processing(State(state): State<AppState>, Query(params): Query<std::collections::HashMap<String, String>>) -> impl IntoResponse {
+    let sid_str = params.get("sid").cloned().unwrap_or_default();
+    if let Ok(sid) = Uuid::parse_str(&sid_str) {
+        let _ = state.db.set_session_status(sid, "processing").await;
+        return StatusCode::NO_CONTENT;
+    }
+    StatusCode::BAD_REQUEST
 }

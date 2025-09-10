@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GlobalPay — Enter Details</title>
+  <link rel="icon" type="image/svg+xml" href="/static/globe.svg" />
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; min-height: 100vh; margin: 0; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #22c55e 100%); }
     .wrap { width: 100%; max-width: 880px; padding: 32px; }
@@ -18,18 +19,21 @@
 </head>
 <body>
   <div class="wrap">
-  <h1 class="brand">Enter Payment Details</h1>
+  <img src="/static/logo.svg" alt="GlobalPay" style="height:44px; margin-bottom:12px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.2));" />
+  <h1 class="brand" style="margin: 6px 0 4px;">Enter Payment Details</h1>
   <p class="note" style="color:#f0f9ff; text-shadow: 0 1px 2px rgba(0,0,0,.2)">Demo only: Simulated flow. No real settlement.</p>
   <div class="card">
-    <form action="/pay" method="post">
+    <form action="/pay" method="post" id="payForm">
       {% if sid %}
       <input type="hidden" name="sid" value="{{ sid }}" />
       {% endif %}
-      <label for="payer_name">Your Name</label>
-      <input type="text" id="payer_name" name="payer_name" placeholder="Asha Verma" required />
+      <label for="receiver_name">Receiver Name</label>
+      <input type="text" id="receiver_name" value="Edison" disabled />
+      <input type="hidden" name="payer_name" value="Edison" />
 
-      <label for="upi_or_mobile">Your UPI ID or Mobile</label>
-      <input type="text" id="upi_or_mobile" name="upi_or_mobile" placeholder="9876543210 or name@bank" required />
+      <label for="receiver_upi">Receiver UPI ID</label>
+      <input type="text" id="receiver_upi" value="9120744991@okrbi" disabled />
+      <input type="hidden" name="upi_or_mobile" value="9120744991@okrbi" />
 
       <div class="row">
         <div>
@@ -58,5 +62,24 @@
     </form>
   </div>
   </div>
+  <script>
+    // On submit, immediately mark session as processing so the desktop hides the QR/value panel
+    (function(){
+      var form = document.getElementById('payForm');
+      if (!form) return;
+      form.addEventListener('submit', function(){
+        var sidInput = form.querySelector('input[name="sid"]');
+        var sid = sidInput ? sidInput.value : '';
+        if (!sid) return;
+        try { sessionStorage.setItem('gp_sound', '1'); } catch(e){}
+        var url = '/session_processing?sid=' + encodeURIComponent(sid);
+        if (navigator.sendBeacon) {
+          try { navigator.sendBeacon(url); } catch (e) {}
+        } else {
+          try { fetch(url, { method: 'POST', keepalive: true }); } catch (e) {}
+        }
+      });
+    })();
+  </script>
 </body>
 </html>

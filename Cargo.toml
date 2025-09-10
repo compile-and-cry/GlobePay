@@ -17,7 +17,7 @@ qrcode = "0.13"
 image = { version = "0.24", default-features = false, features = ["png"] }
 base64 = "0.22"
 tower = "0.5"
-tower-http = { version = "0.5", features = ["trace"] }
+tower-http = { version = "0.5", features = ["trace", "fs"] }
 dotenvy = "0.15"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

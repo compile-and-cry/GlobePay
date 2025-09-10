@@ -4,10 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Processing Payment…</title>
+  <link rel="icon" type="image/svg+xml" href="/static/globe.svg" />
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; min-height: 100vh; margin: 0; display:flex; align-items:center; justify-content:center; background: radial-gradient(1200px circle at 10% 10%, #22c55e 0%, transparent 40%), linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #22c55e 100%); overflow:hidden; }
-    .card { background: rgba(255,255,255,.96); box-shadow: 0 10px 30px rgba(2,6,23,.25); border-radius: 14px; padding: 28px; text-align: center; }
-    .tube { position: relative; width: 420px; height: 16px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin: 18px auto; }
+    .card { background: rgba(255,255,255,.96); box-shadow: 0 10px 30px rgba(2,6,23,.25); border-radius: 14px; padding: 24px; text-align: center; width: 92vw; max-width: 520px; margin: 16px; }
+    .tube { position: relative; width: 90%; max-width: 420px; height: 16px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin: 18px auto; }
     .coin { position: absolute; top: -10px; width: 36px; height: 36px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #fde68a, #f59e0b); box-shadow: 0 4px 10px rgba(0,0,0,.2); animation: flow 2.2s cubic-bezier(.4,.0,.2,1) infinite; }
     .coin:nth-child(2) { animation-delay: .4s; }
     .coin:nth-child(3) { animation-delay: .8s; }
@@ -16,8 +17,11 @@
       50% { transform: rotate(180deg) scale(1.05); }
       100% { left: 420px; transform: rotate(360deg) scale(1); }
     }
-    .msg { color:#0b1021; font-weight: 600; }
+    .msg { color:#0b1021; font-weight: 700; font-size: 20px; }
     .sub { color:#334155; font-size: 14px; }
+    @media (max-width: 480px) { .msg { font-size: 18px; } }
+    .chips { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin: 8px 0 6px; }
+    .chip { padding: 6px 10px; border-radius: 999px; background: rgba(226,232,240,.9); color:#0b1021; font-weight:600; font-size: 12px; box-shadow: 0 2px 8px rgba(2,6,23,.08); }
   </style>
   <script>
     setTimeout(function(){
@@ -27,11 +31,37 @@
       if (sid) target += (target.includes('?') ? '&' : '?') + 'sid=' + encodeURIComponent(sid);
       window.location.replace(target);
     }, 2400);
+    try { sessionStorage.setItem('gp_sound', '1'); } catch(e){}
+    // Rotate short partner/status messages while loading
+    (function(){
+      var el = document.getElementById('rolling');
+      if (!el) return;
+      var msgs = [
+        'UPI PA/PG — Razorpay',
+        'UPI PA/PG — Cashfree',
+        'UPI PA/PG — PayU',
+        'Intl — Stripe',
+        'Intl — Wise',
+        'Intl — Adyen',
+        'FX via bank partner…'
+      ];
+      var i = 0;
+      setInterval(function(){ i = (i+1) % msgs.length; el.textContent = msgs[i]; }, 700);
+    })();
   </script>
 </head>
 <body>
   <div class="card">
+    <img src="/static/logo.svg" alt="GlobalPay" style="height:36px; margin-bottom:4px;" />
     <h2 class="msg">Processing your payment…</h2>
+    <div class="chips">
+      <span class="chip">PA/PG (India): Razorpay</span>
+      <span class="chip">Cashfree</span>
+      <span class="chip">PayU</span>
+      <span class="chip">Intl: Stripe</span>
+      <span class="chip">Wise</span>
+      <span class="chip">Adyen</span>
+    </div>
     <p class="sub">Transferring funds securely. This is a demo animation.</p>
     <div class="tube">
       <div class="coin"></div>
@@ -39,6 +69,7 @@
       <div class="coin"></div>
     </div>
     <p class="sub">Amount: ₹{{ amount_inr }} ({{ source_amount }} {{ source_currency }})</p>
+    <p class="sub" id="rolling">FX via bank partner…</p>
   </div>
 </body>
 </html>

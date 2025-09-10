@@ -34,11 +34,13 @@
   <p class="note" style="color:#f0f9ff; text-shadow: 0 1px 2px rgba(0,0,0,.2)">Demo only: This simulates a UPI payment flow without real settlement. Production requires bank/NPCI/PA integrations.</p>
   <div class="card">
     <form action="/generate" method="post">
-      <label for="payer_name">Payer Name</label>
-      <input type="text" id="payer_name" name="payer_name" placeholder="Asha Verma" required />
+      <label for="receiver_name">Receiver Name</label>
+      <input type="text" id="receiver_name" value="Edison" disabled />
+      <input type="hidden" name="payer_name" value="Edison" />
 
-      <label for="upi_or_mobile">UPI ID or Mobile</label>
-      <input type="text" id="upi_or_mobile" name="upi_or_mobile" placeholder="9876543210 or name@bank" required />
+      <label for="receiver_upi">Receiver UPI ID</label>
+      <input type="text" id="receiver_upi" value="9120744991@okrbi" disabled />
+      <input type="hidden" name="upi_or_mobile" value="9120744991@okrbi" />
 
       <div class="row">
         <div>
