@@ -8,6 +8,20 @@ Run locally
   - `export DATABASE_URL=postgres://globalpay:gp_secret_5550@localhost:5550/globalpay`
 - FX rates API key (exchangerate.host live):
   - `export FX_API_KEY=404823e62fd25735ff3f46242b2340f9`
+- Optional: server port and base URL for QR
+  - `export PORT=3000`
+  - `export PUBLIC_BASE_URL=http://localhost:3000`  # or your LAN IP, or ngrok URL
+- Recommended logs
+  - `export RUST_LOG=info`
+
+Environment exports (copy/paste)
+```
+export DATABASE_URL=postgres://globalpay:gp_secret_5550@localhost:5550/globalpay
+export FX_API_KEY=404823e62fd25735ff3f46242b2340f9
+export PORT=3000
+export PUBLIC_BASE_URL=http://localhost:3000   # or https://<your-ngrok>.ngrok-free.app
+export RUST_LOG=info
+```
 - Build and run:
 
   - `cargo run`

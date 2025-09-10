@@ -124,8 +124,15 @@ async fn create_payment(State(state): State<AppState>, Query(q): Query<WithSid>,
         }
     };
 
-    // Convert to INR amount with 2 decimals
+    // Convert to INR amount with 2 decimals (receiver credit)
     let amount_inr = (form.amount * rate * 100.0).round() / 100.0;
+    // Fees in INR (transfer + platform)
+    let fee_inr: f64 = 99.0 + 25.0;
+    // Fees in source currency (if not INR)
+    let fee_src: f64 = if src_ccy == "INR" { fee_inr } else { (fee_inr / rate * 100.0).round() / 100.0 };
+    // Totals debited
+    let total_inr: f64 = ((amount_inr + fee_inr) * 100.0).round() / 100.0;
+    let total_src: f64 = ((form.amount + fee_src) * 100.0).round() / 100.0;
 
     // Store fx rate record (best-effort)
     if src_ccy != "INR" {
@@ -147,6 +154,11 @@ async fn create_payment(State(state): State<AppState>, Query(q): Query<WithSid>,
             form.amount,
             Some(rate),
             rate_ts,
+            99.0,
+            25.0,
+            fee_src,
+            total_inr,
+            total_src,
         )
         .await
         .expect("DB insert failed");
@@ -165,6 +177,11 @@ async fn create_payment(State(state): State<AppState>, Query(q): Query<WithSid>,
     ctx.insert("amount_inr", &amount_inr);
     ctx.insert("source_amount", &form.amount);
     ctx.insert("source_currency", &src_ccy);
+    ctx.insert("fee_inr", &format!("{:.2}", fee_inr));
+    ctx.insert("fee_src", &format!("{:.2}", fee_src));
+    ctx.insert("total_inr", &format!("{:.2}", total_inr));
+    ctx.insert("total_src", &format!("{:.2}", total_src));
+    ctx.insert("rate", &rate);
     if let Some(sid) = sid_opt { ctx.insert("sid", &sid); }
     let body = state.templates.render("processing.html", &ctx).unwrap_or_else(|e| format!("Template error: {}", e));
     Html(body)
@@ -221,6 +238,7 @@ async fn success(State(state): State<AppState>, axum::extract::Query(params): ax
     let mut amount_inr: Option<f64> = None;
     let mut source_amount: Option<f64> = None;
     let mut source_currency: Option<String> = None;
+    let mut rate_opt: Option<f64> = None;
     let mut payer_name: Option<String> = None;
 
     if let Some(pid) = id {
@@ -229,6 +247,7 @@ async fn success(State(state): State<AppState>, axum::extract::Query(params): ax
             amount_inr = Some(p.amount_inr);
             source_amount = Some(p.source_amount);
             source_currency = Some(p.source_currency);
+            rate_opt = p.rate_to_inr;
             payer_name = Some(p.payer_name);
         }
     }
@@ -248,7 +267,18 @@ async fn success(State(state): State<AppState>, axum::extract::Query(params): ax
     if let Some(n) = payer_name { ctx.insert("payer_name", &n); }
     if let Some(a) = amount_inr { ctx.insert("amount_inr", &format!("{:.2}", a)); }
     if let Some(a) = source_amount { ctx.insert("source_amount", &format!("{:.2}", a)); }
-    if let Some(c) = source_currency { ctx.insert("source_currency", &c); }
+    if let Some(c) = &source_currency { ctx.insert("source_currency", c); }
+    if let Some(r) = rate_opt { ctx.insert("rate", &r); }
+    // Query back the payment to pull persisted totals
+    if let Some(pid) = id {
+        if let Ok(Some(p)) = state.db.get_payment(pid).await {
+            let fee_inr = p.fee_transfer_inr + p.fee_platform_inr;
+            ctx.insert("fee_inr", &format!("{:.2}", fee_inr));
+            ctx.insert("fee_src", &format!("{:.2}", p.fee_src_total));
+            ctx.insert("total_inr", &format!("{:.2}", p.total_inr));
+            ctx.insert("total_src", &format!("{:.2}", p.total_src));
+        }
+    }
     let body = state.templates.render("success.html", &ctx).unwrap_or_else(|e| format!("Template error: {}", e));
     Html(body).into_response()
 }

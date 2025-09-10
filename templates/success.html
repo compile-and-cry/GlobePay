@@ -28,7 +28,8 @@
     <img src="/static/logo.svg" alt="GlobalPay" style="height:44px; margin-bottom:8px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.2));" />
     <h1>Payment Successful</h1>
     <div class="card">
-      <p class="ok">{{ source_amount }} {{ source_currency }} received • ₹{{ amount_inr }} credited</p>
+      <p class="ok">Total debited: ₹{{ total_inr }} ({{ total_src }} {{ source_currency }})</p>
+      <p class="muted">Receiver credited: ₹{{ amount_inr }} • Fees: ₹{{ fee_inr }} (~{{ fee_src }} {{ source_currency }})</p>
       {% if payer_name %}<p class="muted">Receiver: {{ payer_name }}</p>{% endif %}
       <p class="muted">This is a simulated flow. In production, status must be updated via the bank/PSP callback and verified before fulfillment.</p>
       <p><a class="btn back" href="/">Back to start</a></p>

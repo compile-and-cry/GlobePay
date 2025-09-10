@@ -20,6 +20,11 @@ pub struct Payment {
     pub source_amount: f64,
     pub rate_to_inr: Option<f64>,
     pub rate_timestamp: Option<DateTime<Utc>>,
+    pub fee_transfer_inr: f64,
+    pub fee_platform_inr: f64,
+    pub fee_src_total: f64,
+    pub total_inr: f64,
+    pub total_src: f64,
 }
 
 #[derive(sqlx::FromRow, Debug, Clone)]
@@ -57,13 +62,19 @@ impl Db {
         source_amount: f64,
         rate_to_inr: Option<f64>,
         rate_timestamp: Option<DateTime<Utc>>,
+        fee_transfer_inr: f64,
+        fee_platform_inr: f64,
+        fee_src_total: f64,
+        total_inr: f64,
+        total_src: f64,
     ) -> anyhow::Result<Uuid> {
         let id = Uuid::new_v4();
         sqlx::query(
             r#"INSERT INTO payments (
                     id, payer_name, upi_id, amount_inr, note, status,
-                    source_currency, source_amount, rate_to_inr, rate_timestamp
-               ) VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,$8,$9)"#,
+                    source_currency, source_amount, rate_to_inr, rate_timestamp,
+                    fee_transfer_inr, fee_platform_inr, fee_src_total, total_inr, total_src
+               ) VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,$8,$9,$10,$11,$12,$13,$14)"#,
         )
         .bind(id)
         .bind(payer_name)
@@ -74,6 +85,11 @@ impl Db {
         .bind(source_amount)
         .bind(rate_to_inr)
         .bind(rate_timestamp)
+        .bind(fee_transfer_inr)
+        .bind(fee_platform_inr)
+        .bind(fee_src_total)
+        .bind(total_inr)
+        .bind(total_src)
         .execute(&self.pool)
         .await?;
         Ok(id)
