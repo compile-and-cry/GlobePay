@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GlobalPay — Scan to Pay</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; min-height: 100vh; margin: 0; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #22c55e 100%); }
+    .wrap { text-align:center; padding: 24px; }
+    .card { display:inline-block; background: rgba(255,255,255,.96); box-shadow: 0 10px 30px rgba(2,6,23,.25); border-radius: 14px; padding: 24px; }
+    img { width: 256px; height: 256px; display:block; margin: 12px auto; }
+    h1 { color:#fff; text-shadow: 0 1px 2px rgba(0,0,0,.2); }
+    .muted { color:#f0f9ff; text-shadow: 0 1px 2px rgba(0,0,0,.2) }
+    a.btn { margin-top: 16px; padding: 12px 18px; border:0; border-radius:8px; background: linear-gradient(90deg, #0ea5e9, #6366f1); color:#fff; text-decoration:none; display:inline-block; box-shadow: 0 6px 16px rgba(2,6,23,.25); }
+    .processing, .success { display:none; }
+    .tube { position: relative; width: 420px; height: 16px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin: 18px auto; }
+    .coin { position: absolute; top: -10px; width: 36px; height: 36px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #fde68a, #f59e0b); box-shadow: 0 4px 10px rgba(0,0,0,.2); animation: flow 2.2s cubic-bezier(.4,.0,.2,1) infinite; }
+    .coin:nth-child(2) { animation-delay: .4s; }
+    .coin:nth-child(3) { animation-delay: .8s; }
+    @keyframes flow { 0% { left: -40px; transform: rotate(0) scale(1); } 50% { transform: rotate(180deg) scale(1.05); } 100% { left: 420px; transform: rotate(360deg) scale(1); } }
+    .ok { color: #166534; font-weight: 700; font-size: 22px; }
+  </style>
+  <script>
+    const sid = '{{ sid }}';
+    async function poll() {
+      try {
+        const r = await fetch('/session_status?sid=' + encodeURIComponent(sid), { cache: 'no-store' });
+        const j = await r.json();
+        const s = j.status;
+        const qr = document.getElementById('qr');
+        const proc = document.getElementById('processing');
+        const succ = document.getElementById('success');
+        if (s === 'processing') {
+          qr.style.display = 'none'; proc.style.display = 'block'; succ.style.display = 'none';
+        } else if (s === 'success') {
+          qr.style.display = 'none'; proc.style.display = 'none'; succ.style.display = 'block';
+        } else {
+          qr.style.display = 'block'; proc.style.display = 'none'; succ.style.display = 'none';
+        }
+      } catch (e) { /* ignore */ }
+    }
+    setInterval(poll, 1000);
+    window.addEventListener('load', poll);
+  </script>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Scan to Start Payment</h1>
+    <p class="muted">Scan the QR to open the payment form.</p>
+    <div class="card" id="qr">
+      <img src="{{ qr_data_url }}" alt="Scan to Pay" />
+      <p><a class="btn" href="{{ scan_url }}">Open form</a></p>
+    </div>
+    <div class="card processing" id="processing">
+      <h3>Processing your payment…</h3>
+      <div class="tube">
+        <div class="coin"></div>
+        <div class="coin"></div>
+        <div class="coin"></div>
+      </div>
+      <p class="muted" style="color:#0b1021">Hang tight — almost there.</p>
+    </div>
+    <div class="card success" id="success">
+      <h2 class="ok">Payment Successful</h2>
+      <p class="muted" style="color:#0b1021">You can close this window.</p>
+    </div>
+  </div>
+</body>
+</html>

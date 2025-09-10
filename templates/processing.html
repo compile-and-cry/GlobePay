@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Processing Payment…</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; min-height: 100vh; margin: 0; display:flex; align-items:center; justify-content:center; background: radial-gradient(1200px circle at 10% 10%, #22c55e 0%, transparent 40%), linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #22c55e 100%); overflow:hidden; }
+    .card { background: rgba(255,255,255,.96); box-shadow: 0 10px 30px rgba(2,6,23,.25); border-radius: 14px; padding: 28px; text-align: center; }
+    .tube { position: relative; width: 420px; height: 16px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin: 18px auto; }
+    .coin { position: absolute; top: -10px; width: 36px; height: 36px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #fde68a, #f59e0b); box-shadow: 0 4px 10px rgba(0,0,0,.2); animation: flow 2.2s cubic-bezier(.4,.0,.2,1) infinite; }
+    .coin:nth-child(2) { animation-delay: .4s; }
+    .coin:nth-child(3) { animation-delay: .8s; }
+    @keyframes flow {
+      0% { left: -40px; transform: rotate(0) scale(1); }
+      50% { transform: rotate(180deg) scale(1.05); }
+      100% { left: 420px; transform: rotate(360deg) scale(1); }
+    }
+    .msg { color:#0b1021; font-weight: 600; }
+    .sub { color:#334155; font-size: 14px; }
+  </style>
+  <script>
+    setTimeout(function(){
+      var id = '{{ id | default(value="") }}';
+      var sid = '{{ sid | default(value="") }}';
+      var target = '/success' + (id ? ('?id=' + encodeURIComponent(id)) : '?');
+      if (sid) target += (target.includes('?') ? '&' : '?') + 'sid=' + encodeURIComponent(sid);
+      window.location.replace(target);
+    }, 2400);
+  </script>
+</head>
+<body>
+  <div class="card">
+    <h2 class="msg">Processing your payment…</h2>
+    <p class="sub">Transferring funds securely. This is a demo animation.</p>
+    <div class="tube">
+      <div class="coin"></div>
+      <div class="coin"></div>
+      <div class="coin"></div>
+    </div>
+    <p class="sub">Amount: ₹{{ amount_inr }} ({{ source_amount }} {{ source_currency }})</p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,38 @@
+[package]
+name = "globalpay"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = { version = "0.7", features = ["macros", "form"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tera = "1.19"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+urlencoding = "2"
+url = "2"
+qrcode = "0.13"
+image = { version = "0.24", default-features = false, features = ["png"] }
+base64 = "0.22"
+tower = "0.5"
+tower-http = { version = "0.5", features = ["trace"] }
+dotenvy = "0.15"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+thiserror = "1"
+anyhow = "1"
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
+
+# sqlx with Postgres
+sqlx = { version = "0.7", features = [
+  "runtime-tokio-rustls",
+  "postgres",
+  "uuid",
+  "chrono",
+  "macros",
+  "migrate"
+] }
+
+[build-dependencies]

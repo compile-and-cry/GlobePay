@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GlobalPay — Demo</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      min-height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #22c55e 100%);
+      color: #0b1021;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wrap { width: 100%; max-width: 880px; padding: 32px; }
+    .brand { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.2); }
+    .card { background: rgba(255,255,255,.96); box-shadow: 0 10px 30px rgba(2,6,23,.25); border-radius: 14px; padding: 28px; backdrop-filter: blur(4px); }
+    label { display:block; margin: 12px 0 4px; }
+    input, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
+    select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    button { margin-top: 16px; padding: 12px 18px; border: 0; border-radius: 8px; background: linear-gradient(90deg, #0ea5e9, #6366f1); color: white; cursor: pointer; box-shadow: 0 6px 16px rgba(2,6,23,.25); }
+    .note { color: #555; font-size: 14px; margin-top: 12px; }
+  </style>
+  <meta name="robots" content="noindex" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'unsafe-inline' 'self'"> 
+</head>
+<body>
+  <div class="wrap">
+  <h1 class="brand">GlobalPay — Simulated Demo</h1>
+  <p class="note" style="color:#f0f9ff; text-shadow: 0 1px 2px rgba(0,0,0,.2)">Demo only: This simulates a UPI payment flow without real settlement. Production requires bank/NPCI/PA integrations.</p>
+  <div class="card">
+    <form action="/generate" method="post">
+      <label for="payer_name">Payer Name</label>
+      <input type="text" id="payer_name" name="payer_name" placeholder="Asha Verma" required />
+
+      <label for="upi_or_mobile">UPI ID or Mobile</label>
+      <input type="text" id="upi_or_mobile" name="upi_or_mobile" placeholder="9876543210 or name@bank" required />
+
+      <div class="row">
+        <div>
+          <label for="amount">Amount</label>
+          <input type="number" step="0.01" id="amount" name="amount" placeholder="500" min="0.01" required />
+        </div>
+        <div>
+          <label for="currency">Currency</label>
+          <select id="currency" name="currency" required>
+            <option value="INR">India (INR)</option>
+            <option value="AED">Emirates (UAE) — AED</option>
+            <option value="NPR">Nepal — NPR</option>
+            <option value="BTN">Bhutan — BTN</option>
+            <option value="SGD">Singapore — SGD</option>
+            <option value="MUR">Mauritius — MUR</option>
+            <option value="EUR">France — EUR</option>
+            <option value="LKR">Sri Lanka — LKR</option>
+          </select>
+        </div>
+      </div>
+
+      <label for="note">Note (optional)</label>
+      <textarea id="note" name="note" placeholder="Invoice #123"></textarea>
+
+      <button type="submit">Generate UPI QR</button>
+    </form>
+  </div>
+  </div>
+</body>
+</html>

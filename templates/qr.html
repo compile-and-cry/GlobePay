@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UPI QR — GlobalPay</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; min-height: 100vh; margin: 0; text-align: center; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #22c55e 100%); }
+    .wrap { width:100%; max-width: 840px; padding: 32px; }
+    .card { display: inline-block; background: rgba(255,255,255,.96); box-shadow: 0 10px 30px rgba(2,6,23,.25); border-radius: 14px; padding: 24px; text-align: center; }
+    img { width: 256px; height: 256px; display: block; margin: 12px auto; }
+    .muted { color: #333; }
+    a.btn, button { margin: 12px 8px 0; padding: 12px 18px; border: 0; border-radius: 8px; background: linear-gradient(90deg, #0ea5e9, #6366f1); color: white; cursor: pointer; text-decoration: none; display: inline-block; box-shadow: 0 6px 16px rgba(2,6,23,.25); }
+  </style>
+  <meta name="robots" content="noindex" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'unsafe-inline' 'self'"> 
+</head>
+<body>
+  <div class="wrap">
+  <h1 style="color:#fff; text-shadow: 0 1px 2px rgba(0,0,0,.2)">Scan UPI QR</h1>
+  <div class="card">
+    <p class="muted">Pay to <strong>{{ payer_name }}</strong> ({{ upi }})</p>
+    <p class="muted">Amount: <strong>{{ source_amount }} {{ source_currency }}</strong> ≈ ₹<strong>{{ amount_inr }}</strong> (Rate: {{ rate }} INR/{{ source_currency }})</p>
+    <img src="{{ qr_data_url }}" alt="UPI QR" />
+    <p><a class="btn" href="{{ deeplink }}">Open in UPI app</a></p>
+    <p class="muted">This is a demo. Click below to simulate a success callback.</p>
+    <p><a class="btn" href="/success?id={{ id }}">Simulate Success</a></p>
+  </div>
+  <p class="muted" style="margin-top: 24px; color:#f0f9ff; text-shadow: 0 1px 2px rgba(0,0,0,.2)">Note: In production, payment status must be confirmed via PSP/bank webhook or order status APIs, not via this button.</p>
+  </div>
+</body>
+</html>
