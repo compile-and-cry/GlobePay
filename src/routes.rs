@@ -126,10 +126,15 @@ async fn create_payment(State(state): State<AppState>, Query(q): Query<WithSid>,
 
     // Convert to INR amount with 2 decimals (receiver credit)
     let amount_inr = (form.amount * rate * 100.0).round() / 100.0;
-    // Fees in INR (transfer + platform)
-    let fee_inr: f64 = 99.0 + 25.0;
+    // Fee components (transfer + platform). For INR source, no charges.
+    let (fee_transfer_inr_comp, fee_platform_inr_comp) = if src_ccy == "INR" {
+        (0.0_f64, 0.0_f64)
+    } else {
+        (99.0_f64, 25.0_f64)
+    };
+    let fee_inr: f64 = fee_transfer_inr_comp + fee_platform_inr_comp;
     // Fees in source currency (if not INR)
-    let fee_src: f64 = if src_ccy == "INR" { fee_inr } else { (fee_inr / rate * 100.0).round() / 100.0 };
+    let fee_src: f64 = if src_ccy == "INR" { 0.0 } else { (fee_inr / rate * 100.0).round() / 100.0 };
     // Totals debited
     let total_inr: f64 = ((amount_inr + fee_inr) * 100.0).round() / 100.0;
     let total_src: f64 = ((form.amount + fee_src) * 100.0).round() / 100.0;
@@ -154,8 +159,8 @@ async fn create_payment(State(state): State<AppState>, Query(q): Query<WithSid>,
             form.amount,
             Some(rate),
             rate_ts,
-            99.0,
-            25.0,
+            fee_transfer_inr_comp,
+            fee_platform_inr_comp,
             fee_src,
             total_inr,
             total_src,
