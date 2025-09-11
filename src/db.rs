@@ -25,6 +25,9 @@ pub struct Payment {
     pub fee_src_total: f64,
     pub total_inr: f64,
     pub total_src: f64,
+    pub risk_score: Option<i32>,
+    pub risk_label: Option<String>,
+    pub risk_reasons: Option<String>,
 }
 
 #[derive(sqlx::FromRow, Debug, Clone)]
@@ -67,14 +70,21 @@ impl Db {
         fee_src_total: f64,
         total_inr: f64,
         total_src: f64,
+        risk_score: i32,
+        risk_label: &str,
+        risk_reasons: Option<&str>,
     ) -> anyhow::Result<Uuid> {
         let id = Uuid::new_v4();
         sqlx::query(
             r#"INSERT INTO payments (
                     id, payer_name, upi_id, amount_inr, note, status,
                     source_currency, source_amount, rate_to_inr, rate_timestamp,
-                    fee_transfer_inr, fee_platform_inr, fee_src_total, total_inr, total_src
-               ) VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,$8,$9,$10,$11,$12,$13,$14)"#,
+                    fee_transfer_inr, fee_platform_inr, fee_src_total, total_inr, total_src,
+                    risk_score, risk_label, risk_reasons
+               ) VALUES (
+                    $1,$2,$3,$4,$5,'pending',$6,$7,$8,$9,$10,$11,$12,$13,$14,
+                    $15,$16,$17
+               )"#,
         )
         .bind(id)
         .bind(payer_name)
@@ -90,6 +100,9 @@ impl Db {
         .bind(fee_src_total)
         .bind(total_inr)
         .bind(total_src)
+        .bind(risk_score)
+        .bind(risk_label)
+        .bind(risk_reasons)
         .execute(&self.pool)
         .await?;
         Ok(id)

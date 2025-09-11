@@ -72,6 +72,7 @@
           <label for="amount">Amount</label>
           <input type="number" step="0.01" id="amount" name="amount" placeholder="500" min="0.01" required />
           <div class="hint">Minimum 0.01 • Enter amount in selected currency</div>
+          <div class="hint" id="aiSuggest" style="margin-top:6px; display:none;"><strong>AI suggestion:</strong> <span id="aiSuggestText"></span> <button type="button" id="aiSuggestSwitch" class="ghost" style="margin-left:6px; padding:4px 8px; font-size:12px;">Switch</button></div>
         </div>
         <div>
           <label for="currency">Currency</label>
@@ -144,6 +145,40 @@
         else { hint.textContent = 'Includes live FX + small fees shown upfront'; }
       }
       if (ccy && hint) { ccy.addEventListener('change', updateHint); updateHint(); }
+
+      // AI currency optimizer (demo): for the same numeric amount across currencies
+      var amt = document.getElementById('amount');
+      var sugg = document.getElementById('aiSuggest');
+      var suggText = document.getElementById('aiSuggestText');
+      var suggBtn = document.getElementById('aiSuggestSwitch');
+      var lastBest = null;
+      function debounce(fn, ms){ var t; return function(){ clearTimeout(t); var args=arguments; t=setTimeout(function(){ fn.apply(null,args); }, ms); } }
+      function fetchSuggest(){
+        var a = parseFloat(amt && amt.value || '0');
+        if (!a || a <= 0) { if (sugg) sugg.style.display = 'none'; return; }
+        fetch('/optimize_currency?amount=' + encodeURIComponent(a))
+          .then(function(r){ return r.json(); })
+          .then(function(j){
+            lastBest = j && j.best_currency;
+            var current = (ccy && ccy.value || '').toUpperCase();
+            if (!lastBest || lastBest === current) { if (sugg) sugg.style.display = 'none'; return; }
+            if (suggText) suggText.textContent = 'Consider paying in ' + lastBest + ' for approx ₹' + j.est_inr + ' to receiver.';
+            if (sugg) sugg.style.display = 'block';
+          })
+          .catch(function(){ if (sugg) sugg.style.display = 'none'; });
+      }
+      if (amt) { amt.addEventListener('input', debounce(fetchSuggest, 300)); }
+      if (suggBtn) { suggBtn.addEventListener('click', function(){ if (!lastBest || !ccy) return; ccy.value = lastBest; updateHint(); fetchSuggest(); }); }
+
+      // Simple AI explainer widget
+      var qa = document.createElement('div');
+      qa.className = 'card';
+      qa.style.marginTop = '12px';
+      qa.innerHTML = '<h3>Questions?</h3><div class="muted" style="font-size:13px; margin-bottom:6px;">Ask about fees, FX, UPI demo vs. prod.</div><div style="display:flex; gap:6px;"><input id="aiQ" type="text" placeholder="e.g., How are fees calculated?" style="flex:1;" /><button type="button" id="aiAsk" class="ghost">Ask AI</button></div><div id="aiA" class="hint" style="margin-top:8px;"></div>';
+      var cards = document.querySelector('.cards');
+      if (cards && cards.firstElementChild) { cards.firstElementChild.appendChild(qa); }
+      var aiQ = null, aiA = null;
+      setTimeout(function(){ aiQ = document.getElementById('aiQ'); aiA = document.getElementById('aiA'); var btn = document.getElementById('aiAsk'); if (btn) btn.addEventListener('click', function(){ var q=(aiQ&&aiQ.value)||''; if (!q.trim()) return; aiA.textContent = 'Thinking…'; fetch('/ask', { method:'POST', headers: { 'content-type':'application/json' }, body: JSON.stringify({ question: q }) }).then(function(r){ return r.json(); }).then(function(j){ aiA.textContent = j && j.answer || 'Sorry, no answer.'; }).catch(function(){ aiA.textContent = 'Sorry, something went wrong.'; }); }); }, 50);
     })();
   </script>
 </body>

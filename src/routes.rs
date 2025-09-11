@@ -7,6 +7,7 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 use crate::{AppState};
+use crate::ai;
 
 pub fn router(state: AppState) -> Router {
     Router::new()
@@ -17,6 +18,8 @@ pub fn router(state: AppState) -> Router {
         .route("/session_status", get(session_status))
         .route("/session_processing", post(session_processing))
         .route("/success", get(success))
+        .route("/ask", post(ask_ai))
+        .route("/optimize_currency", get(optimize_currency))
         .nest_service("/static", ServeDir::new("static"))
         .with_state(state)
 }
@@ -126,6 +129,8 @@ async fn create_payment(State(state): State<AppState>, Query(q): Query<WithSid>,
 
     // Convert to INR amount with 2 decimals (receiver credit)
     let amount_inr = (form.amount * rate * 100.0).round() / 100.0;
+    // AI risk assessment (demo heuristics)
+    let risk = ai::assess_risk(&upi_id, &src_ccy, amount_inr, form.note.as_deref());
     // Fee components (transfer + platform). For INR source, no charges.
     let (fee_transfer_inr_comp, fee_platform_inr_comp) = if src_ccy == "INR" {
         (0.0_f64, 0.0_f64)
@@ -164,6 +169,9 @@ async fn create_payment(State(state): State<AppState>, Query(q): Query<WithSid>,
             fee_src,
             total_inr,
             total_src,
+            risk.score,
+            &risk.label,
+            Some(&risk.reasons.join(", ")),
         )
         .await
         .expect("DB insert failed");
@@ -187,6 +195,9 @@ async fn create_payment(State(state): State<AppState>, Query(q): Query<WithSid>,
     ctx.insert("total_inr", &format!("{:.2}", total_inr));
     ctx.insert("total_src", &format!("{:.2}", total_src));
     ctx.insert("rate", &rate);
+    ctx.insert("risk_label", &risk.label);
+    ctx.insert("risk_score", &risk.score);
+    if !risk.reasons.is_empty() { ctx.insert("risk_reasons", &risk.reasons.join(", ")); }
     if let Some(sid) = sid_opt { ctx.insert("sid", &sid); }
     let body = state.templates.render("processing.html", &ctx).unwrap_or_else(|e| format!("Template error: {}", e));
     Html(body)
@@ -282,6 +293,9 @@ async fn success(State(state): State<AppState>, axum::extract::Query(params): ax
             ctx.insert("fee_src", &format!("{:.2}", p.fee_src_total));
             ctx.insert("total_inr", &format!("{:.2}", p.total_inr));
             ctx.insert("total_src", &format!("{:.2}", p.total_src));
+            if let Some(lbl) = p.risk_label.clone() { ctx.insert("risk_label", &lbl); }
+            if let Some(sc) = p.risk_score { ctx.insert("risk_score", &sc); }
+            if let Some(rn) = p.risk_reasons.clone() { ctx.insert("risk_reasons", &rn); }
         }
     }
     let body = state.templates.render("success.html", &ctx).unwrap_or_else(|e| format!("Template error: {}", e));
@@ -314,4 +328,39 @@ async fn session_processing(State(state): State<AppState>, Query(params): Query<
         return StatusCode::NO_CONTENT;
     }
     StatusCode::BAD_REQUEST
+}
+
+#[derive(Deserialize)]
+struct AskReq { question: String }
+
+async fn ask_ai(Json(req): Json<AskReq>) -> impl IntoResponse {
+    let ans = ai::answer_faq(&req.question);
+    Json(serde_json::json!({ "answer": ans }))
+}
+
+#[derive(Deserialize)]
+struct OptQuery { amount: Option<f64> }
+
+async fn optimize_currency(Query(q): Query<OptQuery>) -> impl IntoResponse {
+    let amount = q.amount.unwrap_or(0.0).max(0.0);
+    let ccys = ["INR","AED","NPR","BTN","SGD","MUR","EUR","LKR"];
+    let mut best_ccy = "INR".to_string();
+    let mut best_inr = -1.0f64;
+    let mut items: Vec<serde_json::Value> = Vec::new();
+    for c in ccys.iter() {
+        let rate = if *c == "INR" { 1.0 } else { fallback_rate(c) };
+        let recv_inr = if *c == "INR" { amount } else { (amount * rate - (99.0 + 25.0)).max(0.0) };
+        if recv_inr > best_inr { best_inr = recv_inr; best_ccy = (*c).to_string(); }
+        items.push(serde_json::json!({
+            "currency": c,
+            "rate": rate,
+            "est_inr": (recv_inr * 100.0).round() / 100.0
+        }));
+    }
+    Json(serde_json::json!({
+        "best_currency": best_ccy,
+        "est_inr": (best_inr * 100.0).round() / 100.0,
+        "assumption": "Same numeric amount across currencies; non-INR includes ₹124 fees using fallback rates.",
+        "items": items
+    }))
 }

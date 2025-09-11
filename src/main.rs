@@ -1,5 +1,6 @@
 mod routes;
 mod db;
+mod ai;
 
 use axum::{Router};
 use std::net::{SocketAddr, IpAddr, Ipv4Addr};

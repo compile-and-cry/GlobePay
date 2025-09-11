@@ -61,6 +61,9 @@
       <span class="chip">Intl: Stripe</span>
       <span class="chip">Wise</span>
       <span class="chip">Adyen</span>
+      {% if risk_label and risk_score %}
+      <span class="chip">AI risk: {{ risk_label | upper }} ({{ risk_score }})</span>
+      {% endif %}
     </div>
     <p class="sub">Transferring funds securely. This is a demo animation.</p>
     <div class="tube">
@@ -70,6 +73,9 @@
     </div>
     <p class="sub">Total debited: ₹{{ total_inr }} ({{ total_src }} {{ source_currency }})</p>
     <p class="sub">Includes fees: ₹{{ fee_inr }} (~{{ fee_src }} {{ source_currency }})</p>
+    {% if risk_reasons %}
+    <p class="sub">AI notes: {{ risk_reasons }}</p>
+    {% endif %}
     <p class="sub" id="rolling">FX via bank partner…</p>
   </div>
 </body>

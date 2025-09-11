@@ -10,7 +10,7 @@ Run locally
   - `export FX_API_KEY=404823e62fd25735ff3f46242b2340f9`
 - Optional: server port and base URL for QR
   - `export PORT=3000`
-  - `export PUBLIC_BASE_URL=http://localhost:3000`  # or your LAN IP, or ngrok URL
+  - `export PUBLIC_BASE_URL=https://70a6bce83068.ngrok-free.app`  # or your LAN IP, or ngrok URL
 - Recommended logs
   - `export RUST_LOG=info`
 
@@ -39,6 +39,12 @@ Architecture & Roadmap
   - Roadmap (Phase 1–4: Demo → Pilot → Growth → Full Stack PSP).
   - Bottom Line summary of regulatory path and requirements.
   - Render with any PlantUML viewer or VS Code extension (e.g., "PlantUML").
+
+AI (Demo)
+- Fraud Risk: Lightweight 0–100 risk scoring with Low/Medium/High label and reasons (amount, cross‑border, UPI quality, keywords, time). Stored in `payments` and shown on processing/success.
+- Explainer: `/ask` endpoint with a tiny keyword‑based FAQ that answers common questions (fees, FX, UPI vs. prod, env).
+- Currency Optimizer: `/optimize_currency?amount=500` suggests the source currency that maximizes INR received for the same numeric amount, using fallback FX and demo fees.
+- All AI features are demo‑grade. For production, use robust models, proper evaluation, and human review.
 
 Migrations
 - Located in `migrations/` and embedded via `sqlx::migrate!()`.

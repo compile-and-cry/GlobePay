@@ -30,6 +30,12 @@
     <div class="card">
       <p class="ok">Total debited: ₹{{ total_inr }} ({{ total_src }} {{ source_currency }})</p>
       <p class="muted">Receiver credited: ₹{{ amount_inr }} • Fees: ₹{{ fee_inr }} (~{{ fee_src }} {{ source_currency }})</p>
+      {% if risk_label and risk_score %}
+      <p class="muted">AI risk: <strong style="text-transform:uppercase">{{ risk_label }}</strong> ({{ risk_score }})</p>
+      {% endif %}
+      {% if risk_reasons %}
+      <p class="muted">AI notes: {{ risk_reasons }}</p>
+      {% endif %}
       {% if payer_name %}<p class="muted">Receiver: {{ payer_name }}</p>{% endif %}
       <p class="muted">This is a simulated flow. In production, status must be updated via the bank/PSP callback and verified before fulfillment.</p>
       <p><a class="btn back" href="/">Back to start</a></p>
