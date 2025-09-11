@@ -156,7 +156,17 @@
       function fetchSuggest(){
         var a = parseFloat(amt && amt.value || '0');
         if (!a || a <= 0) { if (sugg) sugg.style.display = 'none'; return; }
-        fetch('/optimize_currency?amount=' + encodeURIComponent(a))
+        // Build allowed currency list from the select options
+        var allowed = [];
+        if (ccy && ccy.options) {
+          for (var i = 0; i < ccy.options.length; i++) {
+            var opt = ccy.options[i];
+            var v = (opt && opt.value || '').trim();
+            if (v) allowed.push(v.toUpperCase());
+          }
+        }
+        var url = '/optimize_currency?amount=' + encodeURIComponent(a) + (allowed.length ? '&allowed=' + encodeURIComponent(allowed.join(',')) : '');
+        fetch(url)
           .then(function(r){ return r.json(); })
           .then(function(j){
             lastBest = j && j.best_currency;

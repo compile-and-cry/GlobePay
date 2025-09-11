@@ -5,6 +5,7 @@ use serde::Deserialize;
 use tera::{Context};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
+use std::collections::{HashSet};
 
 use crate::{AppState};
 use crate::ai;
@@ -339,18 +340,53 @@ async fn ask_ai(Json(req): Json<AskReq>) -> impl IntoResponse {
 }
 
 #[derive(Deserialize)]
-struct OptQuery { amount: Option<f64> }
+struct OptQuery { amount: Option<f64>, allowed: Option<String> }
 
 async fn optimize_currency(Query(q): Query<OptQuery>) -> impl IntoResponse {
     let amount = q.amount.unwrap_or(0.0).max(0.0);
-    let ccys = ["INR","AED","NPR","BTN","SGD","MUR","EUR","LKR"];
+    // Server-side whitelist (authoritative): env ALLOWED_CURRENCIES="INR,AED,..." or fallback
+    let default_ccys = ["INR","AED","NPR","BTN","SGD","MUR","EUR","LKR"];
+    let server_allowed: HashSet<String> = std::env::var("ALLOWED_CURRENCIES")
+        .ok()
+        .and_then(|s| {
+            let v: Vec<String> = s
+                .split(',')
+                .map(|x| x.trim().to_uppercase())
+                .filter(|x| !x.is_empty())
+                .collect();
+            if v.is_empty() { None } else { Some(v) }
+        })
+        .unwrap_or_else(|| default_ccys.iter().map(|s| s.to_string()).collect())
+        .into_iter()
+        .collect();
+
+    // Optional client filter (UI options) — intersect with server whitelist
+    let client_allowed: Option<HashSet<String>> = q.allowed.as_deref().map(|allowed| allowed
+        .split(',')
+        .map(|s| s.trim().to_uppercase())
+        .filter(|s| !s.is_empty())
+        .collect());
+
+    let ccys_vec: Vec<String> = match client_allowed {
+        Some(client) => server_allowed.intersection(&client).cloned().collect(),
+        None => server_allowed.into_iter().collect(),
+    };
+
+    if ccys_vec.is_empty() {
+        return Json(serde_json::json!({
+            "best_currency": serde_json::Value::Null,
+            "est_inr": 0.0,
+            "assumption": "No allowed currencies configured",
+            "items": []
+        }));
+    }
     let mut best_ccy = "INR".to_string();
     let mut best_inr = -1.0f64;
     let mut items: Vec<serde_json::Value> = Vec::new();
-    for c in ccys.iter() {
-        let rate = if *c == "INR" { 1.0 } else { fallback_rate(c) };
-        let recv_inr = if *c == "INR" { amount } else { (amount * rate - (99.0 + 25.0)).max(0.0) };
-        if recv_inr > best_inr { best_inr = recv_inr; best_ccy = (*c).to_string(); }
+    for c in ccys_vec.iter() {
+        let rate = if c == "INR" { 1.0 } else { fallback_rate(c) };
+        let recv_inr = if c == "INR" { amount } else { (amount * rate - (99.0 + 25.0)).max(0.0) };
+        if recv_inr > best_inr { best_inr = recv_inr; best_ccy = c.to_string(); }
         items.push(serde_json::json!({
             "currency": c,
             "rate": rate,
